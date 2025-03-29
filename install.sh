@@ -13,12 +13,8 @@ NC='\033[0m' # No Color
 install_go() {
     echo -e "${YELLOW}Installing Go...${NC}"
 
-    # Get the latest Go version
-    GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | grep -o '^go[0-9.]*')
-    if [ -z "$GO_VERSION" ]; then
-        echo -e "${RED}Failed to get Go version. Using latest stable version.${NC}"
-        GO_VERSION="go1.22.1"
-    fi
+    # Use fixed stable version
+    GO_VERSION="go1.22.1"
 
     # Download Go
     echo -e "${YELLOW}Downloading Go ${GO_VERSION}...${NC}"
