@@ -147,6 +147,7 @@ func collectMetrics(maxBandwidthMbps float64) Metrics {
 
 func sendMetrics(url string, token string, metrics Metrics) {
 	data, err := json.Marshal(metrics)
+	fmt.Println("sending metrics: ", string(data))
 	if err != nil {
 		log.Println("Error marshaling JSON:", err)
 		return
