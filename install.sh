@@ -14,7 +14,7 @@ install_go() {
     echo -e "${YELLOW}Installing Go...${NC}"
 
     # Use fixed stable version
-    GO_VERSION="go1.22.1"
+    GO_VERSION="go1.24.1"
 
     # Download Go
     echo -e "${YELLOW}Downloading Go ${GO_VERSION}...${NC}"
