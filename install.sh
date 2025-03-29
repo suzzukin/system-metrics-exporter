@@ -153,15 +153,6 @@ git clone https://github.com/suzzukin/system-metrics-exporter.git
 cd system-metrics-exporter
 echo -e "${GREEN}✓ Repository cloned successfully${NC}"
 
-# Always ask for URL and token
-echo -e "${YELLOW}Step 7: Configuring metrics endpoint...${NC}"
-read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
-echo -e "${GREEN}✓ Metrics endpoint configured: $METRICS_URL${NC}"
-
-echo -e "${YELLOW}Step 8: Configuring JWT token...${NC}"
-read -p "Enter the JWT token for authentication (press Enter to skip): " JWT_TOKEN
-echo -e "${GREEN}✓ JWT token configured${NC}"
-
 echo -e "${YELLOW}Step 9: Setting up configuration directory...${NC}"
 CONFIG_DIR="/var/lib/vpn-metrics"
 if [ ! -d "$CONFIG_DIR" ]; then
@@ -178,8 +169,8 @@ if [ ! -f "$CONFIG_DIR/config.json" ]; then
 
     # Create JSON configuration using echo and jq for proper JSON escaping
     echo "{
-        \"url\": \"$METRICS_URL\",
-        \"token\": \"$JWT_TOKEN\"
+        \"url\": \"\",
+        \"token\": \"\"
     }" > "$CONFIG_FILE"
 
     echo -e "${GREEN}✓ Configuration file created${NC}"
