@@ -153,19 +153,14 @@ git clone https://github.com/suzzukin/system-metrics-exporter.git
 cd system-metrics-exporter
 echo -e "${GREEN}✓ Repository cloned successfully${NC}"
 
-# Only ask for URL if no existing config
-if [ ! -f "/var/lib/vpn-metrics/config.json" ]; then
-    echo -e "${YELLOW}Step 7: Configuring metrics endpoint...${NC}"
-    read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
-    echo -e "${GREEN}✓ Metrics endpoint configured: $METRICS_URL${NC}"
+# Always ask for URL and token
+echo -e "${YELLOW}Step 7: Configuring metrics endpoint...${NC}"
+read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
+echo -e "${GREEN}✓ Metrics endpoint configured: $METRICS_URL${NC}"
 
-    echo -e "${YELLOW}Step 8: Configuring JWT token...${NC}"
-    read -p "Enter the JWT token for authentication (press Enter to skip): " JWT_TOKEN
-    echo -e "${GREEN}✓ JWT token configured${NC}"
-else
-    echo -e "${YELLOW}Step 7: Using existing configuration...${NC}"
-    echo -e "${GREEN}✓ Existing configuration preserved${NC}"
-fi
+echo -e "${YELLOW}Step 8: Configuring JWT token...${NC}"
+read -p "Enter the JWT token for authentication (press Enter to skip): " JWT_TOKEN
+echo -e "${GREEN}✓ JWT token configured${NC}"
 
 echo -e "${YELLOW}Step 9: Setting up configuration directory...${NC}"
 CONFIG_DIR="/var/lib/vpn-metrics"
@@ -176,23 +171,16 @@ else
     echo -e "${GREEN}✓ Config directory already exists${NC}"
 fi
 
-# Only create new config if no existing config
-if [ ! -f "$CONFIG_DIR/config.json" ]; then
-    echo -e "${YELLOW}Step 10: Creating configuration file...${NC}"
-    CONFIG_FILE="$CONFIG_DIR/config.json"
+echo -e "${YELLOW}Step 10: Creating configuration file...${NC}"
+CONFIG_FILE="$CONFIG_DIR/config.json"
 
-    # Create JSON configuration using printf
-    printf '{
+# Create JSON configuration using printf
+printf '{
     "url": "%s",
     "token": "%s"
 }' "$METRICS_URL" "$JWT_TOKEN" > "$CONFIG_FILE"
 
-    echo -e "${GREEN}✓ Configuration file created${NC}"
-else
-    echo -e "${YELLOW}Step 10: Preserving existing configuration...${NC}"
-    restore_config
-    echo -e "${GREEN}✓ Existing configuration restored${NC}"
-fi
+echo -e "${GREEN}✓ Configuration file created${NC}"
 
 echo -e "${YELLOW}Step 11: Building application...${NC}"
 go build -o /usr/local/bin/node-metrics-exporter
