@@ -180,10 +180,14 @@ fi
 if [ ! -f "$CONFIG_DIR/config.json" ]; then
     echo -e "${YELLOW}Step 10: Creating configuration file...${NC}"
     CONFIG_FILE="$CONFIG_DIR/config.json"
+    # Properly escape the variables for JSON
+    METRICS_URL_ESCAPED=$(echo "$METRICS_URL" | sed 's/"/\\"/g')
+    JWT_TOKEN_ESCAPED=$(echo "$JWT_TOKEN" | sed 's/"/\\"/g')
+    
     cat > "$CONFIG_FILE" << EOF
 {
-    "url": "$METRICS_URL",
-    "token": "$JWT_TOKEN"
+    "url": "${METRICS_URL_ESCAPED}",
+    "token": "${JWT_TOKEN_ESCAPED}"
 }
 EOF
     echo -e "${GREEN}✓ Configuration file created${NC}"
