@@ -41,7 +41,7 @@ A lightweight system metrics collector and exporter written in Go that monitors 
 ### Quick Install
 
 ```bash
-curl -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/install.sh?t=$(date +%s)" | sudo bash
+curl -H 'Cache-Control: no-cache' -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/install.sh?t=$(date +%s)" | sudo bash
 ```
 
 The installation script will:
@@ -114,7 +114,7 @@ The installation script will:
 ### Quick Uninstall
 
 ```bash
-curl -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/uninstall.sh?t=$(date +%s)" | sudo bash
+curl -H 'Cache-Control: no-cache' -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/uninstall.sh?t=$(date +%s)" | sudo bash
 ```
 
 The uninstallation script will:
