@@ -11,16 +11,28 @@ install_go() {
     echo -e "${YELLOW}Installing Go...${NC}"
 
     # Get the latest Go version
-    GO_VERSION=$(curl -s https://golang.org/VERSION?m=text)
+    GO_VERSION=$(curl -s https://go.dev/VERSION?m=text)
+    if [ -z "$GO_VERSION" ]; then
+        echo -e "${RED}Failed to get Go version. Using latest stable version.${NC}"
+        GO_VERSION="go1.22.1"
+    fi
 
     # Download Go
-    wget "https://golang.org/dl/${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz
+    echo -e "${YELLOW}Downloading Go ${GO_VERSION}...${NC}"
+    if ! wget "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz; then
+        echo -e "${RED}Failed to download Go.${NC}"
+        exit 1
+    fi
 
     # Remove old Go installation if exists
     sudo rm -rf /usr/local/go
 
     # Extract Go
-    sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+    echo -e "${YELLOW}Extracting Go...${NC}"
+    if ! sudo tar -C /usr/local -xzf /tmp/go.tar.gz; then
+        echo -e "${RED}Failed to extract Go.${NC}"
+        exit 1
+    fi
 
     # Add Go to PATH if not already present
     if ! grep -q "export PATH=\$PATH:/usr/local/go/bin" ~/.bashrc; then
@@ -29,6 +41,12 @@ install_go() {
 
     # Source the updated PATH
     source ~/.bashrc
+
+    # Verify Go installation
+    if ! command -v go &> /dev/null; then
+        echo -e "${RED}Go installation failed.${NC}"
+        exit 1
+    fi
 
     # Cleanup
     rm /tmp/go.tar.gz
