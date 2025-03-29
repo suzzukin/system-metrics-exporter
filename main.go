@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-
-	// "io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +27,7 @@ type Metrics struct {
 	Memory        float64 `json:"memory_percent"`
 	NetInPercent  float64 `json:"net_in_percent"`
 	NetOutPercent float64 `json:"net_out_percent"`
+	Speedtest     float64 `json:"speedtest_mbps"`
 }
 
 func loadConfig(configPath string) Config {
@@ -45,41 +45,35 @@ func loadConfig(configPath string) Config {
 	return config
 }
 
-func getMaxBandwidthMbps() float64 {
-	interfaces, err := psnet.Interfaces()
-	if err != nil {
-		log.Println("Ошибка при получении интерфейсов:", err)
-		return 1000.0 // Значение по умолчанию
+func runSpeedtest() (float64, error) {
+	// Проверяем наличие speedtest-cli
+	if _, err := exec.LookPath("speedtest-cli"); err != nil {
+		return 0, fmt.Errorf("speedtest-cli не установлен: %v", err)
 	}
 
-	for _, iface := range interfaces {
-		isUp := false
-		isLoopback := false
-		for _, flag := range iface.Flags {
-			if flag == "up" {
-				isUp = true
-			}
-			if flag == "loopback" {
-				isLoopback = true
-			}
-		}
-		if !isUp || isLoopback {
-			continue
-		}
-		speedFile := fmt.Sprintf("/sys/class/net/%s/speed", iface.Name)
-		speedData, err := os.ReadFile(speedFile)
-		if err != nil {
-			continue
-		}
-		speedStr := strings.TrimSpace(string(speedData))
-		speed, err := strconv.Atoi(speedStr)
-		if err != nil {
-			continue
-		}
-		return float64(speed)
+	// Запускаем speedtest-cli
+	cmd := exec.Command("speedtest-cli", "--simple")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf("ошибка при запуске speedtest: %v", err)
 	}
-	log.Println("Не удалось определить скорость, используется значение по умолчанию")
-	return 1000.0
+
+	// Парсим результат
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Download:") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				speed, err := strconv.ParseFloat(parts[1], 64)
+				if err != nil {
+					return 0, fmt.Errorf("ошибка при парсинге скорости: %v", err)
+				}
+				return speed, nil
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("не удалось получить результат speedtest")
 }
 
 func collectMetrics(maxBandwidthMbps float64) Metrics {
@@ -90,7 +84,7 @@ func collectMetrics(maxBandwidthMbps float64) Metrics {
 	var cpuTotal, memTotal, netInTotal, netOutTotal float64
 	var lastNetIn, lastNetOut uint64
 
-	netIO, err := psnet.IOCounters(false) // Используем psnet вместо net
+	netIO, err := psnet.IOCounters(false)
 	if err != nil {
 		log.Println("Ошибка при получении сетевой статистики:", err)
 		return Metrics{}
@@ -109,7 +103,7 @@ func collectMetrics(maxBandwidthMbps float64) Metrics {
 
 		// Сеть
 		time.Sleep(interval)
-		netIO, err = psnet.IOCounters(false) // Используем psnet вместо net
+		netIO, err = psnet.IOCounters(false)
 		if err != nil {
 			log.Println("Ошибка при получении сетевой статистики:", err)
 			continue
@@ -134,11 +128,19 @@ func collectMetrics(maxBandwidthMbps float64) Metrics {
 	netInPercent := (avgNetInMbps / maxBandwidthMbps) * 100
 	netOutPercent := (avgNetOutMbps / maxBandwidthMbps) * 100
 
+	// Запускаем speedtest
+	speedtestMbps, err := runSpeedtest()
+	if err != nil {
+		log.Printf("Ошибка при измерении скорости: %v", err)
+		speedtestMbps = 0
+	}
+
 	return Metrics{
 		CPU:           avgCPU,
 		Memory:        avgMemory,
 		NetInPercent:  netInPercent,
 		NetOutPercent: netOutPercent,
+		Speedtest:     speedtestMbps,
 	}
 }
 
@@ -166,7 +168,13 @@ func main() {
 	flag.Parse()
 
 	config := loadConfig(*configPath)
-	maxBandwidthMbps := getMaxBandwidthMbps()
+
+	// Запускаем speedtest для определения максимальной пропускной способности
+	maxBandwidthMbps, err := runSpeedtest()
+	if err != nil {
+		log.Printf("Ошибка при определении пропускной способности: %v", err)
+		maxBandwidthMbps = 1000.0 // Значение по умолчанию
+	}
 	log.Printf("Максимальная пропускная способность: %.2f Мбит/с", maxBandwidthMbps)
 
 	for {
