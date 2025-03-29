@@ -13,12 +13,9 @@ NC='\033[0m' # No Color
 install_go() {
     echo -e "${YELLOW}Installing Go...${NC}"
 
-    # Use fixed stable version
-    GO_VERSION="go1.24.1"
-
     # Download Go
-    echo -e "${YELLOW}Downloading Go ${GO_VERSION}...${NC}"
-    if ! wget "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz; then
+    echo -e "${YELLOW}Downloading Go 1.24.1...${NC}"
+    if ! wget "https://go.dev/dl/go1.24.1.linux-amd64.tar.gz" -O /tmp/go.tar.gz; then
         echo -e "${RED}Failed to download Go.${NC}"
         exit 1
     fi
