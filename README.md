@@ -109,6 +109,46 @@ The installation script will:
    sudo systemctl start node-metrics-exporter
    ```
 
+## Uninstallation
+
+### Quick Uninstall
+
+```bash
+curl -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/uninstall.sh?t=$(date +%s)" | sudo bash
+```
+
+The uninstallation script will:
+1. Stop the service
+2. Disable the service
+3. Remove the service file
+4. Remove the binary
+5. Remove configuration files
+6. Clean up systemd
+
+### Manual Uninstallation
+
+1. Stop and disable the service:
+   ```bash
+   sudo systemctl stop node-metrics-exporter
+   sudo systemctl disable node-metrics-exporter
+   ```
+
+2. Remove service file:
+   ```bash
+   sudo rm /etc/systemd/system/node-metrics-exporter.service
+   ```
+
+3. Reload systemd:
+   ```bash
+   sudo systemctl daemon-reload
+   ```
+
+4. Remove binary and configuration:
+   ```bash
+   sudo rm /usr/local/bin/node-metrics-exporter
+   sudo rm -rf /var/lib/vpn-metrics
+   ```
+
 ## Configuration
 
 The exporter is configured via `/var/lib/vpn-metrics/config.json`:

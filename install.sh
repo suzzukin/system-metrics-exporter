@@ -9,6 +9,33 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Function to check if service exists
+check_service_exists() {
+    if systemctl list-unit-files | grep -q "node-metrics-exporter.service"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to backup config
+backup_config() {
+    if [ -f "/var/lib/vpn-metrics/config.json" ]; then
+        echo -e "${YELLOW}Backing up existing configuration...${NC}"
+        sudo cp /var/lib/vpn-metrics/config.json /var/lib/vpn-metrics/config.json.bak
+        echo -e "${GREEN}✓ Configuration backed up${NC}"
+    fi
+}
+
+# Function to restore config
+restore_config() {
+    if [ -f "/var/lib/vpn-metrics/config.json.bak" ]; then
+        echo -e "${YELLOW}Restoring configuration...${NC}"
+        sudo mv /var/lib/vpn-metrics/config.json.bak /var/lib/vpn-metrics/config.json
+        echo -e "${GREEN}✓ Configuration restored${NC}"
+    fi
+}
+
 # Function to install Go
 install_go() {
     echo -e "${YELLOW}Installing Go...${NC}"
@@ -74,14 +101,25 @@ install_go() {
 echo -e "${YELLOW}System Metrics Exporter Installation${NC}"
 echo "----------------------------------------"
 
-echo -e "${YELLOW}Step 1: Checking Git installation...${NC}"
+# Check if service exists
+if check_service_exists; then
+    echo -e "${YELLOW}Existing installation found. Updating...${NC}"
+    echo -e "${YELLOW}Step 1: Stopping service...${NC}"
+    sudo systemctl stop node-metrics-exporter
+    echo -e "${GREEN}✓ Service stopped${NC}"
+    
+    # Backup existing config
+    backup_config
+fi
+
+echo -e "${YELLOW}Step 2: Checking Git installation...${NC}"
 if ! command -v git &> /dev/null; then
     echo -e "${RED}Git is not installed. Please install Git first.${NC}"
     exit 1
 fi
 echo -e "${GREEN}✓ Git is installed${NC}"
 
-echo -e "${YELLOW}Step 2: Checking Go installation...${NC}"
+echo -e "${YELLOW}Step 3: Checking Go installation...${NC}"
 if ! command -v go &> /dev/null; then
     echo -e "${YELLOW}Go is not installed. Installing Go...${NC}"
     install_go
@@ -89,7 +127,7 @@ else
     echo -e "${GREEN}✓ Go is already installed${NC}"
 fi
 
-echo -e "${YELLOW}Step 3: Installing speedtest-cli...${NC}"
+echo -e "${YELLOW}Step 4: Installing speedtest-cli...${NC}"
 if ! command -v speedtest-cli &> /dev/null; then
     echo -e "${YELLOW}Installing speedtest-cli...${NC}"
     if ! sudo apt-get update; then
@@ -105,21 +143,27 @@ else
     echo -e "${GREEN}✓ speedtest-cli is already installed${NC}"
 fi
 
-echo -e "${YELLOW}Step 4: Creating temporary directory...${NC}"
+echo -e "${YELLOW}Step 5: Creating temporary directory...${NC}"
 TEMP_DIR=$(mktemp -d)
 cd "$TEMP_DIR"
 echo -e "${GREEN}✓ Created temporary directory: $TEMP_DIR${NC}"
 
-echo -e "${YELLOW}Step 5: Cloning repository...${NC}"
+echo -e "${YELLOW}Step 6: Cloning repository...${NC}"
 git clone https://github.com/suzzukin/system-metrics-exporter.git
 cd system-metrics-exporter
 echo -e "${GREEN}✓ Repository cloned successfully${NC}"
 
-echo -e "${YELLOW}Step 6: Configuring metrics endpoint...${NC}"
-read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
-echo -e "${GREEN}✓ Metrics endpoint configured: $METRICS_URL${NC}"
+# Only ask for URL if no existing config
+if [ ! -f "/var/lib/vpn-metrics/config.json" ]; then
+    echo -e "${YELLOW}Step 7: Configuring metrics endpoint...${NC}"
+    read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
+    echo -e "${GREEN}✓ Metrics endpoint configured: $METRICS_URL${NC}"
+else
+    echo -e "${YELLOW}Step 7: Using existing configuration...${NC}"
+    echo -e "${GREEN}✓ Existing configuration preserved${NC}"
+fi
 
-echo -e "${YELLOW}Step 7: Setting up configuration directory...${NC}"
+echo -e "${YELLOW}Step 8: Setting up configuration directory...${NC}"
 CONFIG_DIR="/var/lib/vpn-metrics"
 if [ ! -d "$CONFIG_DIR" ]; then
     sudo mkdir -p "$CONFIG_DIR"
@@ -128,20 +172,27 @@ else
     echo -e "${GREEN}✓ Config directory already exists${NC}"
 fi
 
-echo -e "${YELLOW}Step 8: Creating configuration file...${NC}"
-CONFIG_FILE="$CONFIG_DIR/config.json"
-cat > "$CONFIG_FILE" << EOF
+# Only create new config if no existing config
+if [ ! -f "$CONFIG_DIR/config.json" ]; then
+    echo -e "${YELLOW}Step 9: Creating configuration file...${NC}"
+    CONFIG_FILE="$CONFIG_DIR/config.json"
+    cat > "$CONFIG_FILE" << EOF
 {
     "url": "$METRICS_URL"
 }
 EOF
-echo -e "${GREEN}✓ Configuration file created${NC}"
+    echo -e "${GREEN}✓ Configuration file created${NC}"
+else
+    echo -e "${YELLOW}Step 9: Preserving existing configuration...${NC}"
+    restore_config
+    echo -e "${GREEN}✓ Existing configuration restored${NC}"
+fi
 
-echo -e "${YELLOW}Step 9: Building application...${NC}"
+echo -e "${YELLOW}Step 10: Building application...${NC}"
 go build -o /usr/local/bin/node-metrics-exporter
 echo -e "${GREEN}✓ Application built successfully${NC}"
 
-echo -e "${YELLOW}Step 10: Creating systemd service...${NC}"
+echo -e "${YELLOW}Step 11: Creating systemd service...${NC}"
 SERVICE_FILE="/etc/systemd/system/node-metrics-exporter.service"
 cat > "$SERVICE_FILE" << EOF
 [Unit]
@@ -158,13 +209,13 @@ WantedBy=multi-user.target
 EOF
 echo -e "${GREEN}✓ Systemd service file created${NC}"
 
-echo -e "${YELLOW}Step 11: Starting service...${NC}"
+echo -e "${YELLOW}Step 12: Starting service...${NC}"
 sudo systemctl daemon-reload
 sudo systemctl enable node-metrics-exporter
 sudo systemctl start node-metrics-exporter
 echo -e "${GREEN}✓ Service started and enabled${NC}"
 
-echo -e "${YELLOW}Step 12: Verifying service status...${NC}"
+echo -e "${YELLOW}Step 13: Verifying service status...${NC}"
 if sudo systemctl is-active --quiet node-metrics-exporter; then
     echo -e "${GREEN}✓ Service is running${NC}"
     echo -e "${GREEN}Installation completed successfully!${NC}"
@@ -175,7 +226,7 @@ else
     exit 1
 fi
 
-echo -e "${YELLOW}Step 13: Cleaning up...${NC}"
+echo -e "${YELLOW}Step 14: Cleaning up...${NC}"
 cd - > /dev/null
 rm -rf "$TEMP_DIR"
 echo -e "${GREEN}✓ Temporary files cleaned up${NC}"
