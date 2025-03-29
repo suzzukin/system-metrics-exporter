@@ -45,12 +45,6 @@ if ! command -v git &> /dev/null; then
     exit 1
 fi
 
-# Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    echo -e "${RED}Docker is not installed. Please install Docker first.${NC}"
-    exit 1
-fi
-
 # Check if Go is installed, if not install it
 if ! command -v go &> /dev/null; then
     echo -e "${YELLOW}Go is not installed. Installing Go...${NC}"
@@ -83,10 +77,6 @@ cat > "$CONFIG_FILE" << EOF
 }
 EOF
 
-# Build Docker image
-echo -e "${YELLOW}Building Docker image...${NC}"
-docker build -t node-metrics-exporter .
-
 # Build the application
 echo -e "${YELLOW}Building application...${NC}"
 go build -o /usr/local/bin/node-metrics-exporter
@@ -96,23 +86,12 @@ SERVICE_FILE="/etc/systemd/system/node-metrics-exporter.service"
 cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=Node Metrics Exporter
-Requires=docker.service
-After=docker.service
 
 [Service]
-ExecStart=/usr/bin/docker run \\
-    --name node-metrics-exporter \\
-    --privileged \\
-    --cap-add=SYS_ADMIN \\
-    --cap-add=SYS_RESOURCE \\
-    -v /var/lib/vpn-metrics:/var/lib/vpn-metrics \\
-    -v /proc:/proc:ro \\
-    -v /sys:/sys:ro \\
-    --net=host \\
-    node-metrics-exporter
-ExecStop=/usr/bin/docker stop node-metrics-exporter
-ExecStopPost=/usr/bin/docker rm node-metrics-exporter
+Type=simple
+ExecStart=/usr/local/bin/node-metrics-exporter
 Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
@@ -129,11 +108,9 @@ if sudo systemctl is-active --quiet node-metrics-exporter; then
     echo -e "${GREEN}Installation completed successfully!${NC}"
     echo -e "${GREEN}Service is running.${NC}"
     echo -e "You can check the status with: ${YELLOW}sudo systemctl status node-metrics-exporter${NC}"
-    echo -e "Or check Docker container with: ${YELLOW}docker ps | grep node-metrics-exporter${NC}"
 else
     echo -e "${RED}Service failed to start.${NC}"
     echo -e "Check the logs with: ${YELLOW}sudo journalctl -u node-metrics-exporter${NC}"
-    echo -e "Or check Docker logs with: ${YELLOW}docker logs node-metrics-exporter${NC}"
     exit 1
 fi
 
