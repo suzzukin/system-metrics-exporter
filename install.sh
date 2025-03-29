@@ -168,10 +168,7 @@ if [ ! -f "$CONFIG_DIR/config.json" ]; then
     CONFIG_FILE="$CONFIG_DIR/config.json"
 
     # Create JSON configuration using echo and jq for proper JSON escaping
-    echo "{
-        \"url\": \"\",
-        \"token\": \"\"
-    }" > "$CONFIG_FILE"
+    echo "" > "$CONFIG_FILE"
 
     echo -e "${GREEN}✓ Configuration file created${NC}"
 else
@@ -206,7 +203,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable node-metrics-exporter
 sudo systemctl start node-metrics-exporter
 echo -e "${GREEN}✓ Service started and enabled${NC}"
-echo -e "${RED}vim /var/lib/vpn-metrics/config.json${NC}"
+echo -e "${RED}sudo vim /var/lib/vpn-metrics/config.json${NC}"
 echo -e "${RED}sudo systemctl restart node-metrics-exporter${NC}"
 
 echo -e "Check the logs with: ${YELLOW}sudo journalctl -u node-metrics-exporter${NC}"
