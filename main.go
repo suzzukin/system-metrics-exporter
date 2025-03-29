@@ -191,10 +191,17 @@ func main() {
 	}
 	log.Printf("Maximum bandwidth: %.2f Mbps", maxBandwidthMbps)
 
+	// Send metrics immediately after startup
+	log.Println("Sending initial metrics...")
+	metrics := collectMetrics(maxBandwidthMbps)
+	log.Printf("Initial metrics: %+v", metrics)
+	sendMetrics(config.URL, config.Token, metrics)
+
+	// Start regular metrics collection
 	for {
+		time.Sleep(5 * time.Minute)
 		metrics := collectMetrics(maxBandwidthMbps)
 		log.Printf("Collected metrics: %+v", metrics)
 		sendMetrics(config.URL, config.Token, metrics)
-		time.Sleep(5 * time.Minute)
 	}
 }
