@@ -1,1 +1,164 @@
-# system-metrics-exporter
+# System Metrics Exporter
+
+A lightweight system metrics collector and exporter written in Go that monitors CPU, memory, network usage, and internet speed. Designed for system administrators and monitoring systems.
+
+## Features
+
+- **CPU Monitoring**
+  - Real-time CPU usage tracking
+  - Average CPU utilization over time
+
+- **Memory Monitoring**
+  - RAM usage tracking
+  - Memory utilization percentage
+
+- **Network Monitoring**
+  - Bandwidth utilization tracking
+  - Network I/O statistics
+  - Upload/Download speed monitoring
+
+- **Internet Speed Testing**
+  - Integration with speedtest-cli
+  - Regular speed measurements
+  - Real-time bandwidth capacity monitoring
+
+- **Easy Integration**
+  - JSON metrics export
+  - Configurable endpoint
+  - Systemd service integration
+  - Simple installation process
+
+## Requirements
+
+- Linux system
+- Git
+- Go 1.24.1 or later
+- speedtest-cli
+- Systemd
+
+## Installation
+
+### Quick Install
+
+```bash
+curl -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/install.sh?t=$(date +%s)" | sudo bash
+```
+
+The installation script will:
+1. Check and install required dependencies
+2. Clone the repository
+3. Build the application
+4. Set up systemd service
+5. Configure metrics endpoint
+
+### Manual Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/suzzukin/system-metrics-exporter.git
+   cd system-metrics-exporter
+   ```
+
+2. Install dependencies:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y speedtest-cli
+   ```
+
+3. Build the application:
+   ```bash
+   go build -o node-metrics-exporter
+   ```
+
+4. Create configuration:
+   ```bash
+   sudo mkdir -p /var/lib/vpn-metrics
+   sudo nano /var/lib/vpn-metrics/config.json
+   ```
+   Add your metrics endpoint:
+   ```json
+   {
+       "url": "http://your-metrics-endpoint/metrics"
+   }
+   ```
+
+5. Set up systemd service:
+   ```bash
+   sudo cp node-metrics-exporter /usr/local/bin/
+   sudo nano /etc/systemd/system/node-metrics-exporter.service
+   ```
+   Add service configuration:
+   ```ini
+   [Unit]
+   Description=Node Metrics Exporter
+
+   [Service]
+   Type=simple
+   ExecStart=/usr/local/bin/node-metrics-exporter
+   Restart=always
+   RestartSec=10
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+6. Start the service:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable node-metrics-exporter
+   sudo systemctl start node-metrics-exporter
+   ```
+
+## Configuration
+
+The exporter is configured via `/var/lib/vpn-metrics/config.json`:
+
+```json
+{
+    "url": "http://your-metrics-endpoint/metrics"
+}
+```
+
+## Metrics Format
+
+The exporter sends JSON metrics in the following format:
+
+```json
+{
+    "cpu_percent": 45.2,
+    "memory_percent": 68.5,
+    "net_in_percent": 25.3,
+    "net_out_percent": 15.7,
+    "speedtest_mbps": 100.5
+}
+```
+
+## Usage
+
+### Check Service Status
+
+```bash
+sudo systemctl status node-metrics-exporter
+```
+
+### View Logs
+
+```bash
+sudo journalctl -u node-metrics-exporter
+```
+
+### Stop Service
+
+```bash
+sudo systemctl stop node-metrics-exporter
+```
+
+### Start Service
+
+```bash
+sudo systemctl start node-metrics-exporter
+```
+
+## License
+
+MIT License - see LICENSE file for details
