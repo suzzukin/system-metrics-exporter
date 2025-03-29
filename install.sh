@@ -107,7 +107,7 @@ if check_service_exists; then
     echo -e "${YELLOW}Step 1: Stopping service...${NC}"
     sudo systemctl stop node-metrics-exporter
     echo -e "${GREEN}✓ Service stopped${NC}"
-    
+
     # Backup existing config
     backup_config
 fi
@@ -158,7 +158,7 @@ if [ ! -f "/var/lib/vpn-metrics/config.json" ]; then
     echo -e "${YELLOW}Step 7: Configuring metrics endpoint...${NC}"
     read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
     echo -e "${GREEN}✓ Metrics endpoint configured: $METRICS_URL${NC}"
-    
+
     echo -e "${YELLOW}Step 8: Configuring JWT token...${NC}"
     read -p "Enter the JWT token for authentication (press Enter to skip): " JWT_TOKEN
     echo -e "${GREEN}✓ JWT token configured${NC}"
@@ -180,16 +180,13 @@ fi
 if [ ! -f "$CONFIG_DIR/config.json" ]; then
     echo -e "${YELLOW}Step 10: Creating configuration file...${NC}"
     CONFIG_FILE="$CONFIG_DIR/config.json"
-    # Properly escape the variables for JSON
-    METRICS_URL_ESCAPED=$(echo "$METRICS_URL" | sed 's/"/\\"/g')
-    JWT_TOKEN_ESCAPED=$(echo "$JWT_TOKEN" | sed 's/"/\\"/g')
-    
-    cat > "$CONFIG_FILE" << EOF
-{
-    "url": "${METRICS_URL_ESCAPED}",
-    "token": "${JWT_TOKEN_ESCAPED}"
-}
-EOF
+
+    # Create JSON configuration using printf
+    printf '{
+    "url": "%s",
+    "token": "%s"
+}' "$METRICS_URL" "$JWT_TOKEN" > "$CONFIG_FILE"
+
     echo -e "${GREEN}✓ Configuration file created${NC}"
 else
     echo -e "${YELLOW}Step 10: Preserving existing configuration...${NC}"
