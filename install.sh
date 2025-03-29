@@ -6,14 +6,29 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}Node Metrics Exporter Installation${NC}"
+echo -e "${YELLOW}System Metrics Exporter Installation${NC}"
 echo "----------------------------------------"
+
+# Check if git is installed
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}Git is not installed. Please install Git first.${NC}"
+    exit 1
+fi
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
     echo -e "${RED}Docker is not installed. Please install Docker first.${NC}"
     exit 1
 fi
+
+# Create temporary directory
+TEMP_DIR=$(mktemp -d)
+cd "$TEMP_DIR"
+
+# Clone repository
+echo -e "${YELLOW}Cloning repository...${NC}"
+git clone https://github.com/suzzukin/system-metrics-exporter.git
+cd system-metrics-exporter
 
 # Get URL for metrics endpoint
 read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
@@ -78,3 +93,7 @@ else
     echo -e "Or check Docker logs with: ${YELLOW}docker logs node-metrics-exporter${NC}"
     exit 1
 fi
+
+# Cleanup
+cd - > /dev/null
+rm -rf "$TEMP_DIR"
