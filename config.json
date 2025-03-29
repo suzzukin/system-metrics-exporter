@@ -1,3 +1,5 @@
 {
-    "URL": "http://127.0.0.1:3000/metrics"
+    "URL": "https://blc.susi.ltd/nodes/stats",
+    "token" : "kACEfb7ZtmUkyjSARCxLMLATXHD8Y5NnFKOo9TzwSk8"
+
 }
