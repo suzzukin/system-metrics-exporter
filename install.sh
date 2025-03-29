@@ -158,12 +158,16 @@ if [ ! -f "/var/lib/vpn-metrics/config.json" ]; then
     echo -e "${YELLOW}Step 7: Configuring metrics endpoint...${NC}"
     read -p "Enter the URL where metrics will be sent (e.g., http://example.com/metrics): " METRICS_URL
     echo -e "${GREEN}✓ Metrics endpoint configured: $METRICS_URL${NC}"
+    
+    echo -e "${YELLOW}Step 8: Configuring JWT token...${NC}"
+    read -p "Enter the JWT token for authentication (press Enter to skip): " JWT_TOKEN
+    echo -e "${GREEN}✓ JWT token configured${NC}"
 else
     echo -e "${YELLOW}Step 7: Using existing configuration...${NC}"
     echo -e "${GREEN}✓ Existing configuration preserved${NC}"
 fi
 
-echo -e "${YELLOW}Step 8: Setting up configuration directory...${NC}"
+echo -e "${YELLOW}Step 9: Setting up configuration directory...${NC}"
 CONFIG_DIR="/var/lib/vpn-metrics"
 if [ ! -d "$CONFIG_DIR" ]; then
     sudo mkdir -p "$CONFIG_DIR"
@@ -174,25 +178,26 @@ fi
 
 # Only create new config if no existing config
 if [ ! -f "$CONFIG_DIR/config.json" ]; then
-    echo -e "${YELLOW}Step 9: Creating configuration file...${NC}"
+    echo -e "${YELLOW}Step 10: Creating configuration file...${NC}"
     CONFIG_FILE="$CONFIG_DIR/config.json"
     cat > "$CONFIG_FILE" << EOF
 {
-    "url": "$METRICS_URL"
+    "url": "$METRICS_URL",
+    "token": "$JWT_TOKEN"
 }
 EOF
     echo -e "${GREEN}✓ Configuration file created${NC}"
 else
-    echo -e "${YELLOW}Step 9: Preserving existing configuration...${NC}"
+    echo -e "${YELLOW}Step 10: Preserving existing configuration...${NC}"
     restore_config
     echo -e "${GREEN}✓ Existing configuration restored${NC}"
 fi
 
-echo -e "${YELLOW}Step 10: Building application...${NC}"
+echo -e "${YELLOW}Step 11: Building application...${NC}"
 go build -o /usr/local/bin/node-metrics-exporter
 echo -e "${GREEN}✓ Application built successfully${NC}"
 
-echo -e "${YELLOW}Step 11: Creating systemd service...${NC}"
+echo -e "${YELLOW}Step 12: Creating systemd service...${NC}"
 SERVICE_FILE="/etc/systemd/system/node-metrics-exporter.service"
 cat > "$SERVICE_FILE" << EOF
 [Unit]
@@ -209,13 +214,13 @@ WantedBy=multi-user.target
 EOF
 echo -e "${GREEN}✓ Systemd service file created${NC}"
 
-echo -e "${YELLOW}Step 12: Starting service...${NC}"
+echo -e "${YELLOW}Step 13: Starting service...${NC}"
 sudo systemctl daemon-reload
 sudo systemctl enable node-metrics-exporter
 sudo systemctl start node-metrics-exporter
 echo -e "${GREEN}✓ Service started and enabled${NC}"
 
-echo -e "${YELLOW}Step 13: Verifying service status...${NC}"
+echo -e "${YELLOW}Step 14: Verifying service status...${NC}"
 if sudo systemctl is-active --quiet node-metrics-exporter; then
     echo -e "${GREEN}✓ Service is running${NC}"
     echo -e "${GREEN}Installation completed successfully!${NC}"
@@ -226,7 +231,7 @@ else
     exit 1
 fi
 
-echo -e "${YELLOW}Step 14: Cleaning up...${NC}"
+echo -e "${YELLOW}Step 15: Cleaning up...${NC}"
 cd - > /dev/null
 rm -rf "$TEMP_DIR"
 echo -e "${GREEN}✓ Temporary files cleaned up${NC}"

@@ -19,7 +19,8 @@ import (
 )
 
 type Config struct {
-	URL string `json:"url"`
+	URL   string `json:"url"`
+	Token string `json:"token"`
 }
 
 type Metrics struct {
@@ -144,14 +145,26 @@ func collectMetrics(maxBandwidthMbps float64) Metrics {
 	}
 }
 
-func sendMetrics(url string, metrics Metrics) {
+func sendMetrics(url string, token string, metrics Metrics) {
 	data, err := json.Marshal(metrics)
 	if err != nil {
 		log.Println("Error marshaling JSON:", err)
 		return
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		log.Println("Error creating request:", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error sending metrics:", err)
 		return
@@ -180,7 +193,7 @@ func main() {
 	for {
 		metrics := collectMetrics(maxBandwidthMbps)
 		log.Printf("Collected metrics: %+v", metrics)
-		sendMetrics(config.URL, metrics)
+		sendMetrics(config.URL, config.Token, metrics)
 		time.Sleep(5 * time.Minute)
 	}
 }
