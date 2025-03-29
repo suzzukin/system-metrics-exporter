@@ -206,33 +206,11 @@ sudo systemctl daemon-reload
 sudo systemctl enable node-metrics-exporter
 sudo systemctl start node-metrics-exporter
 echo -e "${GREEN}✓ Service started and enabled${NC}"
+echo -e "${RED}vim /var/lib/vpn-metrics/config.json${NC}"
+echo -e "${RED}sudo systemctl restart node-metrics-exporter${NC}"
 
-echo -e "${YELLOW}Step 14: Verifying service status...${NC}"
-if sudo systemctl is-active --quiet node-metrics-exporter; then
-    echo -e "${GREEN}✓ Service is running${NC}"
+echo -e "Check the logs with: ${YELLOW}sudo journalctl -u node-metrics-exporter${NC}"
 
-    echo -e "${YELLOW}Step 15: Testing metrics sending...${NC}"
-    echo -e "${YELLOW}Waiting for service to initialize (5 seconds)...${NC}"
-    sleep 5
-
-    # Check if metrics were sent successfully
-    if sudo journalctl -u node-metrics-exporter -n 50 | grep -q "Collected metrics:"; then
-        echo -e "${GREEN}✓ Metrics sent successfully${NC}"
-        echo -e "${GREEN}Installation completed successfully!${NC}"
-        echo -e "You can check the status with: ${YELLOW}sudo systemctl status node-metrics-exporter${NC}"
-        echo -e "View logs with: ${YELLOW}sudo journalctl -u node-metrics-exporter -f${NC}"
-    else
-        echo -e "${RED}Failed to send metrics.${NC}"
-        echo -e "Check the logs with: ${YELLOW}sudo journalctl -u node-metrics-exporter${NC}"
-        exit 1
-    fi
-else
-    echo -e "${RED}Service failed to start.${NC}"
-    echo -e "Check the logs with: ${YELLOW}sudo journalctl -u node-metrics-exporter${NC}"
-    exit 1
-fi
-
-echo -e "${YELLOW}Step 16: Cleaning up...${NC}"
 cd - > /dev/null
 rm -rf "$TEMP_DIR"
 echo -e "${GREEN}✓ Temporary files cleaned up${NC}"
