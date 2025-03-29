@@ -6,6 +6,36 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Function to install Go
+install_go() {
+    echo -e "${YELLOW}Installing Go...${NC}"
+
+    # Get the latest Go version
+    GO_VERSION=$(curl -s https://golang.org/VERSION?m=text)
+
+    # Download Go
+    wget "https://golang.org/dl/${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz
+
+    # Remove old Go installation if exists
+    sudo rm -rf /usr/local/go
+
+    # Extract Go
+    sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+
+    # Add Go to PATH if not already present
+    if ! grep -q "export PATH=\$PATH:/usr/local/go/bin" ~/.bashrc; then
+        echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+    fi
+
+    # Source the updated PATH
+    source ~/.bashrc
+
+    # Cleanup
+    rm /tmp/go.tar.gz
+
+    echo -e "${GREEN}Go installed successfully!${NC}"
+}
+
 echo -e "${YELLOW}System Metrics Exporter Installation${NC}"
 echo "----------------------------------------"
 
@@ -19,6 +49,12 @@ fi
 if ! command -v docker &> /dev/null; then
     echo -e "${RED}Docker is not installed. Please install Docker first.${NC}"
     exit 1
+fi
+
+# Check if Go is installed, if not install it
+if ! command -v go &> /dev/null; then
+    echo -e "${YELLOW}Go is not installed. Installing Go...${NC}"
+    install_go
 fi
 
 # Create temporary directory
@@ -50,6 +86,10 @@ EOF
 # Build Docker image
 echo -e "${YELLOW}Building Docker image...${NC}"
 docker build -t node-metrics-exporter .
+
+# Build the application
+echo -e "${YELLOW}Building application...${NC}"
+go build -o /usr/local/bin/node-metrics-exporter
 
 # Create systemd service file
 SERVICE_FILE="/etc/systemd/system/node-metrics-exporter.service"
@@ -99,4 +139,4 @@ fi
 
 # Cleanup
 cd - > /dev/null
-rm -rf "$TEMP_DIR" 
+rm -rf "$TEMP_DIR"
