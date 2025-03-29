@@ -161,7 +161,7 @@ func sendMetrics(url string, token string, metrics Metrics) {
 
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Authorization", token)
 	}
 
 	client := &http.Client{}

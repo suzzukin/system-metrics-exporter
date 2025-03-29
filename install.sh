@@ -171,16 +171,23 @@ else
     echo -e "${GREEN}✓ Config directory already exists${NC}"
 fi
 
-echo -e "${YELLOW}Step 10: Creating configuration file...${NC}"
-CONFIG_FILE="$CONFIG_DIR/config.json"
+# Only create new config if no existing config
+if [ ! -f "$CONFIG_DIR/config.json" ]; then
+    echo -e "${YELLOW}Step 10: Creating configuration file...${NC}"
+    CONFIG_FILE="$CONFIG_DIR/config.json"
 
-# Create JSON configuration using printf
-printf '{
-    "url": "%s",
-    "token": "%s"
-}' "$METRICS_URL" "$JWT_TOKEN" > "$CONFIG_FILE"
+    # Create JSON configuration using echo and jq for proper JSON escaping
+    echo "{
+        \"url\": \"$METRICS_URL\",
+        \"token\": \"$JWT_TOKEN\"
+    }" > "$CONFIG_FILE"
 
-echo -e "${GREEN}✓ Configuration file created${NC}"
+    echo -e "${GREEN}✓ Configuration file created${NC}"
+else
+    echo -e "${YELLOW}Step 10: Preserving existing configuration...${NC}"
+    restore_config
+    echo -e "${GREEN}✓ Existing configuration restored${NC}"
+fi
 
 echo -e "${YELLOW}Step 11: Building application...${NC}"
 go build -o /usr/local/bin/node-metrics-exporter
