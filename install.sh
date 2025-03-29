@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# One-liner installation command:
+# curl -s https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/install.sh | sudo bash
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
