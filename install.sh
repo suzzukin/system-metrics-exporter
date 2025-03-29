@@ -62,8 +62,9 @@ After=docker.service
 [Service]
 ExecStart=/usr/bin/docker run \\
     --name node-metrics-exporter \\
-    --security-opt apparmor:unconfined \\
-    --security-opt seccomp:unconfined \\
+    --privileged \\
+    --cap-add=SYS_ADMIN \\
+    --cap-add=SYS_RESOURCE \\
     -v /var/lib/vpn-metrics:/var/lib/vpn-metrics \\
     -v /proc:/proc:ro \\
     -v /sys:/sys:ro \\
