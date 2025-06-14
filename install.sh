@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 # Function to validate URL
 validate_url() {
-    if [[ $1 =~ ^https?://[a-zA-Z0-9.-]+[a-zA-Z0-9]+(:[0-9]+)?(/.*)?$ ]]; then
+    if [[ $1 =~ ^https?:// ]; then
         return 0
     else
         return 1
@@ -28,7 +28,7 @@ echo "===================================="
 
 # Get URL and token from user
 while true; do
-    read -p "Enter the server URL (e.g., https://your-server.com): " SERVER_URL
+    read -p "Enter the server URL (e.g., https://your-server.com): " SERVER_URL < /dev/tty
     if validate_url "$SERVER_URL"; then
         break
     else
@@ -37,7 +37,7 @@ while true; do
 done
 
 while true; do
-    read -p "Enter the API token: " API_TOKEN
+    read -p "Enter the API token: " API_TOKEN < /dev/tty
     if [[ -n "$API_TOKEN" ]]; then
         break
     else
