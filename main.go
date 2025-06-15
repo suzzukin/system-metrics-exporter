@@ -28,8 +28,8 @@ import (
 var Version = "1.0.0"
 
 type Config struct {
-	URL             string `json:"server_url"`
-	Token           string `json:"api_token"`
+	URL             string `json:"URL"`
+	Token           string `json:"token"`
 	ReportInterval  int    `json:"report_interval"`
 	CollectInterval int    `json:"collect_interval"`
 	CollectDuration int    `json:"collect_duration"`
@@ -93,7 +93,7 @@ func loadConfig(configPath string) Config {
 		config.CollectDuration = 5
 	}
 	if config.ReportInterval == 0 {
-		config.ReportInterval = 60
+		config.ReportInterval = 300
 	}
 
 	return config

@@ -96,8 +96,8 @@ echo -e "${YELLOW}Creating configuration...${NC}"
 sudo mkdir -p /var/lib/vpn-metrics
 sudo tee /var/lib/vpn-metrics/config.json > /dev/null << EOF
 {
-    "server_url": "$SERVER_URL",
-    "api_token": "$API_TOKEN",
+    "URL": "$SERVER_URL",
+    "token": "$API_TOKEN",
     "report_interval": 300
 }
 EOF
