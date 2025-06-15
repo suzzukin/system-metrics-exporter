@@ -105,21 +105,7 @@ echo -e "${GREEN}✓ Configuration created${NC}"
 
 # Create systemd service
 echo -e "${YELLOW}Setting up service...${NC}"
-sudo tee /etc/systemd/system/node-metrics-exporter.service > /dev/null << EOF
-[Unit]
-Description=System Metrics Exporter
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/node-metrics-exporter
-Restart=always
-RestartSec=10
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOF
+sudo cp ./node-metrics-exporter.service /etc/systemd/system/node-metrics-exporter.service
 
 # Start service
 sudo systemctl daemon-reload

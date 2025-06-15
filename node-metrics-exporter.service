@@ -1,0 +1,13 @@
+[Unit]
+Description=Node Metrics Exporter
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/node-metrics-exporter
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target 

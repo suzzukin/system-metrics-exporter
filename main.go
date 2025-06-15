@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,28 +10,64 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
-	psnet "github.com/shirou/gopsutil/net"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/load"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 type Config struct {
-	URL            string `json:"server_url"`
-	Token          string `json:"api_token"`
-	ReportInterval int    `json:"report_interval"`
+	URL             string `json:"server_url"`
+	Token           string `json:"api_token"`
+	ReportInterval  int    `json:"report_interval"`
+	CollectInterval int    `json:"collect_interval"`
+	CollectDuration int    `json:"collect_duration"`
 }
 
 type Metrics struct {
+	// Basic metrics
 	CPU           float64 `json:"cpu_percent"`
 	Memory        float64 `json:"memory_percent"`
 	NetInPercent  float64 `json:"net_in_percent"`
 	NetOutPercent float64 `json:"net_out_percent"`
 	Speedtest     float64 `json:"speedtest_mbps"`
+
+	// System metrics
+	Uptime          float64 `json:"uptime_seconds"`
+	LoadAverage     float64 `json:"load_average"`
+	DiskUsage       float64 `json:"disk_usage_percent"`
+	FileDescriptors int     `json:"file_descriptors"`
+
+	// Network metrics
+	ActiveConnections int                      `json:"active_connections"`
+	TCPConnections    int                      `json:"tcp_connections"`
+	UDPConnections    int                      `json:"udp_connections"`
+	NetworkLatency    float64                  `json:"network_latency"`
+	InterfaceStats    map[string]InterfaceStat `json:"interface_stats"`
 }
+
+type InterfaceStat struct {
+	BytesIn    uint64 `json:"bytes_in"`
+	BytesOut   uint64 `json:"bytes_out"`
+	PacketsIn  uint64 `json:"packets_in"`
+	PacketsOut uint64 `json:"packets_out"`
+	ErrorsIn   uint64 `json:"errors_in"`
+	ErrorsOut  uint64 `json:"errors_out"`
+}
+
+var (
+	httpClient = &http.Client{
+		Timeout: 30 * time.Second,
+	}
+)
 
 func loadConfig(configPath string) Config {
 	file, err := os.Open(configPath)
@@ -44,23 +81,35 @@ func loadConfig(configPath string) Config {
 	if err := decoder.Decode(&config); err != nil {
 		log.Fatalf("Failed to read config: %v", err)
 	}
+
+	// Set defaults
+	if config.CollectInterval == 0 {
+		config.CollectInterval = 1
+	}
+	if config.CollectDuration == 0 {
+		config.CollectDuration = 5
+	}
+	if config.ReportInterval == 0 {
+		config.ReportInterval = 60
+	}
+
 	return config
 }
 
 func runSpeedtest() (float64, error) {
-	// Check if speedtest-cli is installed
 	if _, err := exec.LookPath("speedtest-cli"); err != nil {
 		return 0, fmt.Errorf("speedtest-cli is not installed: %v", err)
 	}
 
-	// Run speedtest-cli
-	cmd := exec.Command("speedtest-cli", "--simple")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "speedtest-cli", "--simple")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return 0, fmt.Errorf("error running speedtest: %v", err)
 	}
 
-	// Parse result
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "Download:") {
@@ -78,34 +127,112 @@ func runSpeedtest() (float64, error) {
 	return 0, fmt.Errorf("failed to get speedtest result")
 }
 
-func collectMetrics(maxBandwidthMbps float64) Metrics {
-	const interval = 1 * time.Second
-	const duration = 5 * time.Second
+func getSystemMetrics() (float64, float64, float64, float64) {
+	// CPU Load
+	loadAvg, _ := load.Avg()
+
+	// Memory
+	vm, _ := mem.VirtualMemory()
+
+	// Disk usage
+	diskUsage, _ := disk.Usage("/")
+
+	// File descriptors
+	fdCount := 0.0
+	if proc, err := process.NewProcess(int32(os.Getpid())); err == nil {
+		if fds, err := proc.NumFDs(); err == nil {
+			fdCount = float64(fds)
+		}
+	}
+
+	return loadAvg.Load1, vm.UsedPercent, diskUsage.UsedPercent, fdCount
+}
+
+func getNetworkMetrics() (int, int, int, float64, map[string]InterfaceStat) {
+	// Get all network connections
+	conns, _ := net.Connections("all")
+
+	// Count TCP and UDP connections
+	tcpCount := 0
+	udpCount := 0
+	for _, conn := range conns {
+		if conn.Type == syscall.SOCK_STREAM {
+			tcpCount++
+		} else if conn.Type == syscall.SOCK_DGRAM {
+			udpCount++
+		}
+	}
+
+	// Get interface statistics
+	ioStats, _ := net.IOCounters(true)
+	interfaceStats := make(map[string]InterfaceStat)
+	for _, stat := range ioStats {
+		interfaceStats[stat.Name] = InterfaceStat{
+			BytesIn:    stat.BytesRecv,
+			BytesOut:   stat.BytesSent,
+			PacketsIn:  stat.PacketsRecv,
+			PacketsOut: stat.PacketsSent,
+			ErrorsIn:   stat.Errin,
+			ErrorsOut:  stat.Errout,
+		}
+	}
+
+	// Simple latency check (ping to 8.8.8.8)
+	latency := 0.0
+	if cmd := exec.Command("ping", "-c", "1", "8.8.8.8"); cmd.Run() == nil {
+		if output, err := cmd.CombinedOutput(); err == nil {
+			if strings.Contains(string(output), "time=") {
+				parts := strings.Split(string(output), "time=")
+				if len(parts) > 1 {
+					latencyStr := strings.Split(parts[1], " ")[0]
+					latency, _ = strconv.ParseFloat(latencyStr, 64)
+				}
+			}
+		}
+	}
+
+	return len(conns), tcpCount, udpCount, latency, interfaceStats
+}
+
+func collectMetrics(maxBandwidthMbps float64, config Config) Metrics {
+	interval := time.Duration(config.CollectInterval) * time.Second
+	duration := time.Duration(config.CollectDuration) * time.Second
 	samples := int(duration / interval)
 
 	var cpuTotal, memTotal, netInTotal, netOutTotal float64
 	var lastNetIn, lastNetOut uint64
 
-	netIO, err := psnet.IOCounters(false)
+	metrics := Metrics{
+		CPU:           0,
+		Memory:        0,
+		NetInPercent:  0,
+		NetOutPercent: 0,
+		Speedtest:     0,
+	}
+
+	// Get initial network stats
+	netIO, err := net.IOCounters(false)
 	if err != nil {
 		log.Println("Error getting network statistics:", err)
-		return Metrics{}
+		return metrics
 	}
 	lastNetIn = netIO[0].BytesRecv
 	lastNetOut = netIO[0].BytesSent
 
+	// Collect basic metrics
 	for i := 0; i < samples; i++ {
-		// CPU
-		cpuPercent, _ := cpu.Percent(time.Second, false)
-		cpuTotal += cpuPercent[0]
+		cpuPercent, err := cpu.Percent(time.Second, false)
+		if err == nil && len(cpuPercent) > 0 {
+			cpuTotal += cpuPercent[0]
+		}
 
-		// Memory
-		vm, _ := mem.VirtualMemory()
-		memTotal += vm.UsedPercent
+		vm, err := mem.VirtualMemory()
+		if err == nil {
+			memTotal += vm.UsedPercent
+		}
 
-		// Network
 		time.Sleep(interval)
-		netIO, err = psnet.IOCounters(false)
+		netIO, err = net.IOCounters(false)
 		if err != nil {
 			log.Println("Error getting network statistics:", err)
 			continue
@@ -122,39 +249,47 @@ func collectMetrics(maxBandwidthMbps float64) Metrics {
 		lastNetOut = currentNetOut
 	}
 
-	avgCPU := cpuTotal / float64(samples)
-	avgMemory := memTotal / float64(samples)
-	avgNetInMbps := netInTotal / float64(samples)
-	avgNetOutMbps := netOutTotal / float64(samples)
+	// Calculate averages
+	if samples > 0 {
+		metrics.CPU = cpuTotal / float64(samples)
+		metrics.Memory = memTotal / float64(samples)
+		metrics.NetInPercent = (netInTotal / float64(samples) / maxBandwidthMbps) * 100
+		metrics.NetOutPercent = (netOutTotal / float64(samples) / maxBandwidthMbps) * 100
+	}
 
-	netInPercent := (avgNetInMbps / maxBandwidthMbps) * 100
-	netOutPercent := (avgNetOutMbps / maxBandwidthMbps) * 100
+	// Get system metrics
+	loadAvg, diskUsage, fdCount, _ := getSystemMetrics()
+	metrics.LoadAverage = loadAvg
+	metrics.DiskUsage = diskUsage
+	metrics.FileDescriptors = int(fdCount)
+
+	// Get network metrics
+	activeConns, tcpConns, udpConns, latency, ifStats := getNetworkMetrics()
+	metrics.ActiveConnections = activeConns
+	metrics.TCPConnections = tcpConns
+	metrics.UDPConnections = udpConns
+	metrics.NetworkLatency = latency
+	metrics.InterfaceStats = ifStats
 
 	// Run speedtest
 	speedtestMbps, err := runSpeedtest()
 	if err != nil {
 		log.Printf("Error measuring speed: %v", err)
-		speedtestMbps = 0
+	} else {
+		metrics.Speedtest = speedtestMbps
 	}
 
-	return Metrics{
-		CPU:           avgCPU,
-		Memory:        avgMemory,
-		NetInPercent:  netInPercent,
-		NetOutPercent: netOutPercent,
-		Speedtest:     speedtestMbps,
-	}
+	return metrics
 }
 
-func sendMetrics(url string, token string, metrics Metrics) {
+func sendMetrics(ctx context.Context, url string, token string, metrics Metrics) {
 	data, err := json.Marshal(metrics)
-	fmt.Println("sending metrics: ", string(data))
 	if err != nil {
 		log.Println("Error marshaling JSON:", err)
 		return
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		log.Println("Error creating request:", err)
 		return
@@ -165,8 +300,7 @@ func sendMetrics(url string, token string, metrics Metrics) {
 		req.Header.Set("Authorization", token)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		log.Println("Error sending metrics:", err)
 		return
@@ -174,7 +308,7 @@ func sendMetrics(url string, token string, metrics Metrics) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: server returned status", resp.Status)
+		log.Printf("Error: server returned status %d", resp.StatusCode)
 	}
 }
 
@@ -184,25 +318,41 @@ func main() {
 
 	config := loadConfig(*configPath)
 
-	// Run speedtest to determine maximum bandwidth
 	maxBandwidthMbps, err := runSpeedtest()
 	if err != nil {
 		log.Printf("Error determining bandwidth: %v", err)
-		maxBandwidthMbps = 1000.0 // Default value
+		maxBandwidthMbps = 1000.0
 	}
 	log.Printf("Maximum bandwidth: %.2f Mbps", maxBandwidthMbps)
 
-	// Send metrics immediately after startup
-	log.Println("Sending initial metrics...")
-	metrics := collectMetrics(maxBandwidthMbps)
-	log.Printf("Initial metrics: %+v", metrics)
-	sendMetrics(config.URL, config.Token, metrics)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Start regular metrics collection
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		log.Println("Received shutdown signal, cleaning up...")
+		cancel()
+	}()
+
+	log.Println("Sending initial metrics...")
+	metrics := collectMetrics(maxBandwidthMbps, config)
+	log.Printf("Initial metrics: %+v", metrics)
+	sendMetrics(ctx, config.URL, config.Token, metrics)
+
+	ticker := time.NewTicker(time.Duration(config.ReportInterval) * time.Second)
+	defer ticker.Stop()
+
 	for {
-		time.Sleep(time.Duration(config.ReportInterval) * time.Second)
-		metrics := collectMetrics(maxBandwidthMbps)
-		log.Printf("Collected metrics: %+v", metrics)
-		sendMetrics(config.URL, config.Token, metrics)
+		select {
+		case <-ticker.C:
+			metrics := collectMetrics(maxBandwidthMbps, config)
+			log.Printf("Collected metrics: %+v", metrics)
+			sendMetrics(ctx, config.URL, config.Token, metrics)
+		case <-ctx.Done():
+			log.Println("Shutting down...")
+			return
+		}
 	}
 }
