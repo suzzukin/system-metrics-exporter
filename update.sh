@@ -111,7 +111,7 @@ update_script() {
     print_message "Updating script..." "$YELLOW"
 
     # Install new version
-    mv "$TEMP_DIR/node-metrics-exporter.new" /usr/local/bin/node-metrics-exporter || {
+    mv node-metrics-exporter.new /usr/local/bin/node-metrics-exporter || {
         print_message "Failed to move new version to /usr/local/bin" "$RED"
         exit 1
     }
