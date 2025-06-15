@@ -25,7 +25,7 @@ import (
 )
 
 // Version will be set during build
-var Version = "1.0.2"
+var Version = "1.0.3"
 
 type Config struct {
 	URL             string `json:"URL"`
@@ -291,6 +291,7 @@ func sendMetrics(ctx context.Context, url string, token string, metrics Metrics)
 		log.Println("Error marshaling JSON:", err)
 		return
 	}
+	log.Printf("Sending metrics: %s", string(data))
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(data))
 	if err != nil {
