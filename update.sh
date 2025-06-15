@@ -68,16 +68,20 @@ check_updates() {
     cd system-metrics-exporter
 
     # Build new version
+    print_message "Building new version..." "$YELLOW"
     # Use Go from /usr/local/go/bin if not in PATH
     if ! command -v go &> /dev/null && [ -f "/usr/local/go/bin/go" ]; then
+        /usr/local/go/bin/go version
         /usr/local/go/bin/go build -o node-metrics-exporter.new
     else
+        go version
         go build -o node-metrics-exporter.new
     fi
 
     # Check if build was successful
     if [ ! -f "node-metrics-exporter.new" ]; then
-        print_message "Failed to build new version" "$RED"
+        print_message "Failed to build new version. Current directory: $(pwd)" "$RED"
+        ls -la
         cd - > /dev/null
         rm -rf "$TEMP_DIR"
         return 1
