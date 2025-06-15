@@ -25,7 +25,7 @@ import (
 )
 
 // Version will be set during build
-var Version = "1.0.0"
+var Version = "1.0.1"
 
 type Config struct {
 	URL             string `json:"URL"`
