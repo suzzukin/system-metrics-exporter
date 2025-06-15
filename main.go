@@ -24,6 +24,9 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
+// Version will be set during build
+var Version = "1.0.0"
+
 type Config struct {
 	URL             string `json:"server_url"`
 	Token           string `json:"api_token"`
@@ -313,9 +316,16 @@ func sendMetrics(ctx context.Context, url string, token string, metrics Metrics)
 }
 
 func main() {
-	configPath := flag.String("config", "/var/lib/vpn-metrics/config.json", "Path to config file")
+	configPath := flag.String("config", "/etc/node-metrics-exporter/config.json", "Path to config file")
+	version := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 
+	if *version {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
+
+	// Load configuration
 	config := loadConfig(*configPath)
 
 	maxBandwidthMbps, err := runSpeedtest()
