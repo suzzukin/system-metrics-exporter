@@ -19,8 +19,9 @@ import (
 )
 
 type Config struct {
-	URL   string `json:"url"`
-	Token string `json:"token"`
+	URL            string `json:"server_url"`
+	Token          string `json:"api_token"`
+	ReportInterval int    `json:"report_interval"`
 }
 
 type Metrics struct {
@@ -199,7 +200,7 @@ func main() {
 
 	// Start regular metrics collection
 	for {
-		time.Sleep(5 * time.Minute)
+		time.Sleep(time.Duration(config.ReportInterval) * time.Second)
 		metrics := collectMetrics(maxBandwidthMbps)
 		log.Printf("Collected metrics: %+v", metrics)
 		sendMetrics(config.URL, config.Token, metrics)

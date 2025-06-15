@@ -98,7 +98,7 @@ sudo tee /var/lib/vpn-metrics/config.json > /dev/null << EOF
 {
     "server_url": "$SERVER_URL",
     "api_token": "$API_TOKEN",
-    "report_interval": 60
+    "report_interval": 300
 }
 EOF
 echo -e "${GREEN}✓ Configuration created${NC}"

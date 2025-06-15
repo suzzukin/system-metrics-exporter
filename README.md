@@ -44,12 +44,15 @@ A lightweight system metrics collector and exporter written in Go that monitors 
 curl -H 'Cache-Control: no-cache' -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/install.sh?t=$(date +%s)" | sudo bash
 ```
 
-The installation script will:
-1. Check and install required dependencies
-2. Clone the repository
-3. Build the application
-4. Set up systemd service
-5. Configure metrics endpoint
+**During installation, you will be prompted to enter:**
+- The server URL (e.g., `https://your-server.com`)
+- The API token
+
+The script will:
+- Check and install required dependencies (`git`, `speedtest-cli`, `go`)
+- Clone the repository and build the application
+- Set up the systemd service
+- Create the configuration file interactively
 
 ### Manual Installation
 
@@ -62,7 +65,7 @@ The installation script will:
 2. Install dependencies:
    ```bash
    sudo apt-get update
-   sudo apt-get install -y speedtest-cli
+   sudo apt-get install -y speedtest-cli git
    ```
 
 3. Build the application:
@@ -75,10 +78,12 @@ The installation script will:
    sudo mkdir -p /var/lib/vpn-metrics
    sudo nano /var/lib/vpn-metrics/config.json
    ```
-   Add your metrics endpoint:
+   Example config:
    ```json
    {
-       "url": "http://your-metrics-endpoint/metrics"
+       "server_url": "https://your-server.com",
+       "api_token": "your-token",
+       "report_interval": 60
    }
    ```
 
@@ -151,11 +156,13 @@ The uninstallation script will:
 
 ## Configuration
 
-The exporter is configured via `/var/lib/vpn-metrics/config.json`:
+The exporter is configured via `/var/lib/vpn-metrics/config.json`, which is created automatically during installation:
 
 ```json
 {
-    "url": "http://your-metrics-endpoint/metrics"
+    "server_url": "https://your-server.com",
+    "api_token": "your-token",
+    "report_interval": 60
 }
 ```
 
