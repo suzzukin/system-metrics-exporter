@@ -54,6 +54,12 @@ The script will:
 - Set up the systemd service
 - Create the configuration file interactively
 
+### Update
+
+```bash
+curl -H 'Cache-Control: no-cache' -s "https://raw.githubusercontent.com/suzzukin/system-metrics-exporter/main/update.sh?t=$(date +%s)" | sudo bash
+```
+
 ### Manual Installation
 
 1. Clone the repository:
