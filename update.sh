@@ -64,10 +64,16 @@ check_updates() {
     cd "$TEMP_DIR" || exit 1
 
     # Clone repository
-    git clone "$(git -C "$(dirname "$0")" remote get-url origin)" .
+    git clone -q https://github.com/suzzukin/system-metrics-exporter.git
+    cd system-metrics-exporter
 
     # Build new version
-    go build -o node-metrics-exporter.new
+    # Use Go from /usr/local/go/bin if not in PATH
+    if ! command -v go &> /dev/null && [ -f "/usr/local/go/bin/go" ]; then
+        /usr/local/go/bin/go build -o node-metrics-exporter.new
+    else
+        go build -o node-metrics-exporter.new
+    fi
 
     # Check if build was successful
     if [ ! -f "node-metrics-exporter.new" ]; then
