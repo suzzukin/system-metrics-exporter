@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 # Function to validate URL
 validate_url() {
-    if [[ $1 =~ ^https?:// ]; then
+    if [[ "$1" == http://* || "$1" == https://* ]]; then
         return 0
     else
         return 1
