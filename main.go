@@ -25,7 +25,7 @@ import (
 )
 
 // Version will be set during build
-var Version = "1.0.1"
+var Version = "1.0.2"
 
 type Config struct {
 	URL             string `json:"URL"`
@@ -316,7 +316,7 @@ func sendMetrics(ctx context.Context, url string, token string, metrics Metrics)
 }
 
 func main() {
-	configPath := flag.String("config", "/etc/node-metrics-exporter/config.json", "Path to config file")
+	configPath := flag.String("config", "/var/lib/vpn-metrics/config.json", "Path to config file")
 	version := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 
