@@ -54,8 +54,8 @@ fi
 # Check dependencies
 echo -e "${YELLOW}Checking dependencies...${NC}"
 if ! command -v git &> /dev/null; then
-    echo -e "${RED}Git is required but not installed.${NC}"
-    exit 1
+    echo -e "${YELLOW}Git not found. Attempting to install...${NC}"
+    sudo apt-get update -qq && sudo apt-get install -y git || { echo -e "${RED}Failed to install git via apt-get.${NC}"; exit 1; }
 fi
 
 if ! command -v go &> /dev/null; then
